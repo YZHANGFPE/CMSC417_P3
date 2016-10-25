@@ -1,0 +1,4 @@
+*.txt
+!doc.txt
+*.pdf
+console*

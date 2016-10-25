@@ -1,0 +1,5 @@
+control message type
+
+edgebTCP
+sender: EDGEBTCP srcip dstip src
+receiver: dstip = srcip, myip = dstip src = dst
