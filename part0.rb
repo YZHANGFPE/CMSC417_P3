@@ -1,4 +1,5 @@
 require_relative 'global_variables'
+require_relative 'message'
 
 module P0
 
@@ -13,9 +14,10 @@ module P0
     port = $port_table[dst]
     s = TCPSocket.open(dstip, port)
     $clients[dst] = s
-    msg = "EDGEBTCP " + srcip + " " + dstip + " " + $hostname
-    s.puts(msg)
-    STDOUT.puts(msg)
+    msg = Message.new
+    msg.setType(0)
+    msg.setPayLoad(srcip + " " + dstip + " " + $hostname)
+    s.puts(msg.toString())
     STDOUT.puts "EDGEB: SUCCESS"
   end
 

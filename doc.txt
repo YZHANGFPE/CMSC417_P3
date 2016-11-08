@@ -1,5 +1,15 @@
 control message type
 
-edgebTCP
-sender: EDGEBTCP srcip dstip src
-receiver: dstip = srcip, myip = dstip src = dst
+header format (refer to ICMP)
+header is a string consists of 8 chars
+
+type code checksum restOfTheHeader
+[0]  [1]  [2 - 3]  [4 - 7]
+fragmentFlag fragmentOffSet totalLength
+[8]          [9 - 11]       [12 - 15]
+circuit_id
+[16 - 19]
+
+header setType 0 for edgebTCP
+sender: srcip dstip src
+receiver: dstip = srcip, myip = dstip dst = src

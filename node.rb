@@ -2,6 +2,7 @@ require_relative 'global_variables'
 require_relative 'control_message_handler'
 require_relative 'utilities'
 require_relative 'part0'
+require_relative 'message'
 
 # --------------------- Part 0 --------------------- # 
 
@@ -42,13 +43,10 @@ def circuit(cmd)
 end
 
 def callback(client)
-    while msg = client.gets
-      msg = msg.strip()
-      arr = msg.split(' ')
-      cmd = arr[0]
-      args = arr[1..-1]
-      case cmd
-      when "EDGEBTCP"; CtrlMsg.edgebTCP(args, client)
+    while msg_str = client.gets
+      msg = Message.new(msg_str)
+      case msg.getType()
+      when 0; CtrlMsg.edgebTCP(msg.getPayLoad(), client)
       else STDERR.puts "ERROR: INVALID MESSAGE \"#{msg}\""
       end
     end

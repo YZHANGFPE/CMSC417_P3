@@ -2,10 +2,11 @@ require_relative 'global_variables'
 
 module CtrlMsg
 
-  def CtrlMsg.edgebTCP(cmd, client)
-    dstip = cmd[0]
-    srcip = cmd[1]
-    dst = cmd[2]
+  def CtrlMsg.edgebTCP(msg, client)
+    msg = msg.split(' ')
+    dstip = msg[0]
+    srcip = msg[1]
+    dst = msg[2]
     $ip_table[$hostname] = srcip
     $ip_table[dst] = dstip
     $distance_table[dst] = 1
