@@ -10,6 +10,12 @@ fragmentFlag fragmentOffSet totalLength
 circuit_id
 [16 - 19]
 
-header setType 0 for edgebTCP
-sender: srcip dstip src
+edgeb
+header_field required: type(0) 
+payload: srcip dstip src
 receiver: dstip = srcip, myip = dstip dst = src
+
+flood
+header_field required: type(1) ttl(header index 4) seq(header index 5)
+payload: hostname \t neighbor1, dist1 \t neighbor2, dist2 \t
+receiver: update $network_topology

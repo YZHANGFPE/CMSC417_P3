@@ -1,8 +1,12 @@
 class Message
   HEADER_LENGTH = 20 # header length in bytes
-  TYPE = [0,0] # type field = [start_index, end_index]
-  CODE = [1,1]
-  CHECK_SUM = [2,3]
+  HEADER_CONFIG = {
+    "type" => [0,0], # type field = [start_index, end_index]
+    "code" => [1,1],
+    "checksum" => [2,3],
+    "ttl" => [4,4],
+    "seq" => [5,5],
+  }
 
 
   def initialize(msg = nil)
@@ -24,13 +28,15 @@ class Message
     return @header
   end
 
-  def setType(n)
-    @header[TYPE[0]..TYPE[1]] = n.chr
+  def setHeaderField(field_name, n)
+    field_range = HEADER_CONFIG[field_name]
+    @header[field_range[0]..field_range[1]] = n.chr
   end
 
-  def getType()
-    typ = @header[TYPE[0]..TYPE[1]].ord
-    return typ
+  def getHeaderField(field_name)
+    field_range = HEADER_CONFIG[field_name]
+    res = @header[field_range[0]..field_range[1]].ord
+    return res
   end
 
   def setPayLoad(payload)

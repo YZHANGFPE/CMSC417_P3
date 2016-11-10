@@ -42,21 +42,11 @@ def circuit(cmd)
 	STDOUT.puts "CIRCUIT: not implemented"
 end
 
-def callback(client)
-    while msg_str = client.gets
-      msg = Message.new(msg_str)
-      case msg.getType()
-      when 0; CtrlMsg.edgebTCP(msg.getPayLoad(), client)
-      else STDERR.puts "ERROR: INVALID MESSAGE \"#{msg}\""
-      end
-    end
-end
-
 def startServer()
   server = TCPServer.open($port_table[$hostname])
   loop {
     Thread.start(server.accept) do |client|
-      callback(client)
+      CtrlMsg.callback(client)
     end
   }
 end
@@ -92,6 +82,7 @@ def setup(hostname, port, nodes, config)
 	$port = port
   $distance_table[hostname] = 0
   $next_hop_table[hostname] = hostname
+  $network_topology[$hostname] = {"neighbors" => $distance_table}
   Util.readNodeFile(nodes)
 
   Thread.new {

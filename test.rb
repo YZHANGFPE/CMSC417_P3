@@ -5,23 +5,23 @@ require 'test/unit'
 class TestMessage < Test::Unit::TestCase
 
   def test_toString
-    hdr = "0" * 20
+    hdr = "0" * Message::HEADER_LENGTH
     msg = Message.new(hdr +"Hello")
     assert_equal(hdr + "Hello", msg.toString())
   end
 
   def test_getHeader
-    hdr = "0" * 20
+    hdr = "0" * Message::HEADER_LENGTH
     msg = Message.new(hdr + "Hello")
     assert_equal(hdr, msg.getHeader())
   end
 
-  def test_Type
+  def test_setHeaderField
     msg = Message.new
-    msg.setType(0)
-    assert_equal(0, msg.getType())
-    msg.setType(49)
-    assert_equal("1" + "0" * 19, msg.toString())
+    msg.setHeaderField("type", 0)
+    assert_equal(0, msg.getHeaderField("type"))
+    msg.setHeaderField("type", 49)
+    assert_equal("1" + "0" * (Message::HEADER_LENGTH - 1), msg.toString())
   end
 
   def test_empty_msg

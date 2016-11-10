@@ -29,5 +29,10 @@ module Util
     end
     return temp[0] + "." + temp[1] + "." + temp[2] + "." + temp[3]
   end
+
+  def Util.nextSeqNum()
+    $sequence_num = ($sequence_num + 1) % 256
+    return $sequence_num
+  end
     
 end

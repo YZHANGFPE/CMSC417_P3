@@ -1,4 +1,5 @@
 require_relative 'global_variables'
+require_relative 'control_message_handler'
 require_relative 'message'
 
 module P0
@@ -15,9 +16,13 @@ module P0
     s = TCPSocket.open(dstip, port)
     $clients[dst] = s
     msg = Message.new
-    msg.setType(0)
+    msg.setHeaderField("type", 0)
     msg.setPayLoad(srcip + " " + dstip + " " + $hostname)
     s.puts(msg.toString())
+    CtrlMsg.flood()
+    Thread.new {
+      CtrlMsg.callback(s)
+    }
     STDOUT.puts "EDGEB: SUCCESS"
   end
 
@@ -29,6 +34,7 @@ module P0
       distance = $distance_table[dst]
       output << $hostname << "," << dst << "," << next_hop << "," << distance << "\n"
     end
+    # output << $network_topology
     output.close
     STDOUT.puts "DUMPTABLE: SUCCESS"
   end

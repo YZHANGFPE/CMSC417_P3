@@ -1,4 +1,5 @@
 *.txt
 !doc.txt
+!test_commands.txt
 *.pdf
 console*
