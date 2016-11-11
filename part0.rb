@@ -11,6 +11,7 @@ module P0
     $ip_table[$hostname] = srcip
     $ip_table[dst] = dstip
     $distance_table[dst] = 1
+    $neighbors[dst] = 1
     $next_hop_table[dst] = dst
     port = $port_table[dst]
     s = TCPSocket.open(dstip, port)
@@ -35,6 +36,8 @@ module P0
       output << $hostname << "," << dst << "," << next_hop << "," << distance << "\n"
     end
     # output << $network_topology
+    # output << $distance_table
+    # output << $next_hop_table
     output.close
     STDOUT.puts "DUMPTABLE: SUCCESS"
   end

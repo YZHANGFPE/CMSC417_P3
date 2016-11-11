@@ -9,6 +9,7 @@ module CtrlMsg
       case msg.getHeaderField("type")
       when 0; CtrlMsg.edgeb(msg.getPayLoad(), client)
       when 1; CtrlMsg.floodCallBack(msg)
+      when 2; CtrlMsg.edgeu(msg.getPayLoad())
       else STDERR.puts "ERROR: INVALID MESSAGE \"#{msg}\""
       end
     end
@@ -22,10 +23,21 @@ module CtrlMsg
     $ip_table[$hostname] = srcip
     $ip_table[dst] = dstip
     $distance_table[dst] = 1
+    $neighbors[dst] = 1
     $next_hop_table[dst] = dst
     $clients[dst] = client
     CtrlMsg.flood()
     STDOUT.puts "CTRLMSG-EDGEB: SUCCESS"
+  end
+
+  def CtrlMsg.edgeu(msg)
+    msg = msg.split(' ')
+    dst = msg[0]
+    cost = msg[1].to_i
+    $distance_table[dst] = cost
+    $neighbors[dst] = cost
+    CtrlMsg.flood()
+    STDOUT.puts "CTRLMSG-EDGEU: SUCCESS"
   end
 
   def CtrlMsg.flood()
@@ -34,7 +46,7 @@ module CtrlMsg
     msg.setHeaderField("ttl", $port_table.length)
     msg.setHeaderField("seq", Util.nextSeqNum())
     msg_str = $hostname + "\t"
-    $distance_table.each do |dst, distance|
+    $neighbors.each do |dst, distance|
       msg_str += dst + "," + distance.to_s + "\t"
     end
     msg.setPayLoad(msg_str)
@@ -57,13 +69,14 @@ module CtrlMsg
         host_dist_tbl = Hash.new()
         for i in 1..(payload_array.length - 2)
           neighbor_dist_pair = payload_array[i].split(",")
-          host_dist_tbl[neighbor_dist_pair[0]] = neighbor_dist_pair[1]
+          host_dist_tbl[neighbor_dist_pair[0]] = neighbor_dist_pair[1].to_i
         end
         $network_topology[host] = {"sn" => sn, "neighbors" => host_dist_tbl}
         msg.setHeaderField("ttl", ttl - 1)
         $clients.each do |dst, client|
           client.puts(msg.toString())
         end
+        Util.updateRoutingTable()
         STDOUT.puts "CTRLMSG-FLOODCALLBACK: SUCCESS"
       end
     end

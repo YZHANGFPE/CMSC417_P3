@@ -2,6 +2,7 @@ require_relative 'global_variables'
 require_relative 'control_message_handler'
 require_relative 'utilities'
 require_relative 'part0'
+require_relative 'part1'
 require_relative 'message'
 
 # --------------------- Part 0 --------------------- # 
@@ -61,11 +62,11 @@ def main()
 		args = arr[1..-1]
 		case cmd
 		when "EDGEB"; P0.edgeb(args)
-		when "EDGED"; edged(args)
-		when "EDGEW"; edgew(args)
+		when "EDGED"; P1.edged(args)
+		when "EDGEU"; P1.edgeu(args)
 		when "DUMPTABLE"; P0.dumptable(args)
 		when "SHUTDOWN"; P0.shutdown(args)
-		when "STATUS"; status()
+		when "STATUS"; P1.status()
 		when "SENDMSG"; sendmsg(args)
 		when "PING"; ping(args)
 		when "TRACEROUTE"; traceroute(args)
@@ -78,18 +79,17 @@ def main()
 end
 
 def setup(hostname, port, nodes, config)
-	$hostname = hostname
-	$port = port
+  $hostname = hostname
+  $port = port
+  Util.readNodeFile(nodes)
   $distance_table[hostname] = 0
   $next_hop_table[hostname] = hostname
-  $network_topology[$hostname] = {"neighbors" => $distance_table}
-  Util.readNodeFile(nodes)
-
+  $network_topology[$hostname] = {"neighbors" => $neighbors}
   Thread.new {
     startServer()
   }
 
-	main()
+  main()
 
 end
 

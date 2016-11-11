@@ -16,3 +16,42 @@ NODE n2 DUMPTABLE ./t1_n2_dumptable.txt
 NODE n3 DUMPTABLE ./t1_n3_dumptable.txt
 CONTROLLER SLEEP 1
 CONTROLLER SHUTDOWN
+
+routing
+ruby controller.rb nodes.txt config
+NODE n1 EDGEB 127.0.0.1 127.0.0.1 n2
+NODE n2 EDGEB 127.0.0.1 127.0.0.1 n3
+NODE n3 EDGEB 127.0.0.1 127.0.0.1 n4
+NODE n1 EDGEB 127.0.0.1 127.0.0.1 n4
+NODE n1 DUMPTABLE ./t1_n1_dumptable.txt
+NODE n2 DUMPTABLE ./t1_n2_dumptable.txt
+NODE n3 DUMPTABLE ./t1_n3_dumptable.txt
+NODE n4 DUMPTABLE ./t1_n4_dumptable.txt
+CONTROLLER SLEEP 1
+CONTROLLER SHUTDOWN
+
+edgeu
+ruby controller.rb nodes.txt config
+NODE n1 EDGEB 127.0.0.1 127.0.0.1 n2
+NODE n2 EDGEB 127.0.0.1 127.0.0.1 n3
+NODE n3 EDGEB 127.0.0.1 127.0.0.1 n4
+NODE n1 EDGEB 127.0.0.1 127.0.0.1 n4
+NODE n1 EDGEU n2 2
+NODE n1 DUMPTABLE ./t1_n1_dumptable.txt
+NODE n2 DUMPTABLE ./t1_n2_dumptable.txt
+NODE n3 DUMPTABLE ./t1_n3_dumptable.txt
+NODE n4 DUMPTABLE ./t1_n4_dumptable.txt
+CONTROLLER SLEEP 1
+CONTROLLER SHUTDOWN
+
+edged
+ruby controller.rb nodes.txt config
+NODE n1 EDGEB 127.0.0.1 127.0.0.1 n2
+NODE n1 EDGED n2
+NODE n2 EDGED n1
+NODE n1 STATUS
+NODE n2 STATUS
+NODE n1 DUMPTABLE ./t1_n1_dumptable.txt
+NODE n2 DUMPTABLE ./t1_n2_dumptable.txt
+CONTROLLER SLEEP 1
+CONTROLLER SHUTDOWN
