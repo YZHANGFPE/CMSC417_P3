@@ -3,20 +3,44 @@ require_relative 'utilities'
 
 module CtrlMsg
 
-  def CtrlMsg.callback(client)
+  def CtrlMsg.callback(msg, client)
+    case msg.getHeaderField("type")
+    when 0; CtrlMsg.edgeb(msg.getPayLoad(), client)
+    when 1; CtrlMsg.floodCallBack(msg)
+    when 2; CtrlMsg.edgeu(msg.getPayLoad())
+    else STDERR.puts "ERROR: INVALID MESSAGE \"#{msg}\""
+    end
+  end
+
+  def CtrlMsg.send(client, msg)
+    packet_list = msg.fragment()
+    packet_list.each do |packet|
+      client.puts(packet.toString())
+    end   
+  end
+
+  def CtrlMsg.receive(client)
     while msg_str = client.gets
-      msg = Message.new(msg_str)
-      case msg.getHeaderField("type")
-      when 0; CtrlMsg.edgeb(msg.getPayLoad(), client)
-      when 1; CtrlMsg.floodCallBack(msg)
-      when 2; CtrlMsg.edgeu(msg.getPayLoad())
-      else STDERR.puts "ERROR: INVALID MESSAGE \"#{msg}\""
-      end
+      $mutex.synchronize {
+        msg = Message.new(msg_str.chop)
+        fragment_seq = msg.getHeaderField("fragment_seq")
+        fragment_num = msg.getHeaderField("fragment_num")
+        if fragment_seq == 0
+          CtrlMsg.callback(msg, client)
+        else
+          $receiver_buffer << msg
+          if fragment_num == fragment_seq
+            res_msg = Util.assemble($receiver_buffer)
+            $receiver_buffer.clear()
+            CtrlMsg.callback(res_msg, client)
+          end
+        end
+      }   
     end
   end
 
   def CtrlMsg.edgeb(msg, client)
-    msg = msg.split(' ')
+    msg = msg.split(',')
     dstip = msg[0]
     srcip = msg[1]
     dst = msg[2]
@@ -26,6 +50,7 @@ module CtrlMsg
     $neighbors[dst] = 1
     $next_hop_table[dst] = dst
     $clients[dst] = client
+    STDOUT.puts "In edgeb before flood"
     CtrlMsg.flood()
     STDOUT.puts "CTRLMSG-EDGEB: SUCCESS"
   end
@@ -51,7 +76,7 @@ module CtrlMsg
     end
     msg.setPayLoad(msg_str)
     $clients.each do |dst, client|  
-      client.puts(msg.toString())
+      CtrlMsg.send(client, msg)
     end
     STDOUT.puts "CTRLMSG-FLOOD: SUCCESS"
   end
@@ -67,14 +92,14 @@ module CtrlMsg
       host = payload_array[0]
       if (host != $hostname and ($network_topology[host] == nil or $network_topology[host]["sn"] != sn))
         host_dist_tbl = Hash.new()
-        for i in 1..(payload_array.length - 2)
+        for i in 1..(payload_array.length - 1)
           neighbor_dist_pair = payload_array[i].split(",")
           host_dist_tbl[neighbor_dist_pair[0]] = neighbor_dist_pair[1].to_i
         end
         $network_topology[host] = {"sn" => sn, "neighbors" => host_dist_tbl}
         msg.setHeaderField("ttl", ttl - 1)
         $clients.each do |dst, client|
-          client.puts(msg.toString())
+          CtrlMsg.send(client, msg)
         end
         Util.updateRoutingTable()
         STDOUT.puts "CTRLMSG-FLOODCALLBACK: SUCCESS"

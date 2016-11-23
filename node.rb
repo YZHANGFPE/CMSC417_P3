@@ -44,12 +44,12 @@ def circuit(cmd)
 end
 
 def startServer()
-  server = TCPServer.open($port_table[$hostname])
-  loop {
-    Thread.start(server.accept) do |client|
-      CtrlMsg.callback(client)
-    end
-  }
+	server = TCPServer.open($port_table[$hostname])
+	loop {
+		Thread.start(server.accept) do |client|
+	    	CtrlMsg.receive(client)
+		end
+	}
 end
 
 # do main loop here.... 
@@ -79,18 +79,18 @@ def main()
 end
 
 def setup(hostname, port, nodes, config)
-  $hostname = hostname
-  $port = port
-  Util.readNodeFile(nodes)
-  $distance_table[hostname] = 0
-  $next_hop_table[hostname] = hostname
-  $network_topology[$hostname] = {"neighbors" => $neighbors}
-  Thread.new {
-    startServer()
-  }
+	$hostname = hostname
+	$port = port
+	Util.readNodeFile(nodes)
+	$update_interval, $mtu, $ping_timeout = Util.parse_config_file(config)
+	$distance_table[hostname] = 0
+	$next_hop_table[hostname] = hostname
+	$network_topology[$hostname] = {"neighbors" => $neighbors}
+	Thread.new {
+    	startServer()
+  	}
 
-  main()
-
+  	main()
 end
 
 setup(ARGV[0], ARGV[1], ARGV[2], ARGV[3])

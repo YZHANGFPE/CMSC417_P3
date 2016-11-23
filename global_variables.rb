@@ -1,4 +1,5 @@
 require 'socket'
+require 'thread'
 
 $sequence_num = 0
 $port = nil
@@ -11,4 +12,10 @@ $next_hop_table = Hash.new("NA")
 $server = nil
 $clients = Hash.new()
 $network_topology = Hash.new()
+$mtu = 4
+$update_interval = nil
+$ping_timeout = nil
+$receiver_buffer = []
+$mutex = Mutex.new
+$cv = ConditionVariable.new
 

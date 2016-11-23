@@ -14,7 +14,7 @@ module P1
     msg = Message.new
     msg.setHeaderField("type", 2)
     msg.setPayLoad($hostname + " " + cost.to_s)
-    client.puts(msg.toString())
+    CtrlMsg.send(client, msg)
     CtrlMsg.flood()
     STDOUT.puts "EDGEU: SUCCESS"
   end
@@ -25,6 +25,9 @@ module P1
     $distance_table[dst] = "INF"
     $neighbors.delete(dst)
     $next_hop_table[dst] = "NA"
+    client = $clients[dst]
+    client.close()
+    $clients.delete(dst)
     CtrlMsg.flood()
     STDOUT.puts "EDGED: SUCCESS"
   end

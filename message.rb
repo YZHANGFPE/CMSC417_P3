@@ -6,12 +6,13 @@ class Message
     "checksum" => [2,3],
     "ttl" => [4,4],
     "seq" => [5,5],
+    "fragment_num" => [6,6],
+    "fragment_seq" => [7,7],
   }
-
 
   def initialize(msg = nil)
     if msg.nil?
-      @header = "0" * HEADER_LENGTH
+      @header = ((0).chr) * HEADER_LENGTH
       @payload = ""
     else
       @msg = msg
@@ -24,12 +25,17 @@ class Message
     return @header + @payload
   end
 
+  def setHeader(header)
+    @header = header
+  end
+
   def getHeader()
     return @header
   end
 
   def setHeaderField(field_name, n)
     field_range = HEADER_CONFIG[field_name]
+    # STDOUT.puts n
     @header[field_range[0]..field_range[1]] = n.chr
   end
 
@@ -45,5 +51,33 @@ class Message
 
   def getPayLoad()
     return @payload
+  end
+
+  def fragment()
+    payload_str = @payload
+    payload_size = payload_str.bytesize()
+    packet_list = []
+    if payload_size < $mtu
+      packet_list = [self]
+    else
+      num_of_fragments = (payload_size / $mtu).ceil
+      
+      payload_list = Util.split_str_by_size(payload_str, $mtu)
+      
+      fragment_num = payload_list.length
+      fragment_seq = 1
+
+      payload_list.each do |payload|
+        msg = Message.new
+        msg.setHeader(String.new(@header))
+        msg.setHeaderField("fragment_num", fragment_num)
+        msg.setHeaderField("fragment_seq", fragment_seq)
+        msg.setPayLoad(payload)
+        packet_list << msg
+        fragment_seq += 1
+      end
+    end
+
+    return packet_list
   end
 end

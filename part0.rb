@@ -18,11 +18,11 @@ module P0
     $clients[dst] = s
     msg = Message.new
     msg.setHeaderField("type", 0)
-    msg.setPayLoad(srcip + " " + dstip + " " + $hostname)
-    s.puts(msg.toString())
+    msg.setPayLoad(srcip + "," + dstip + "," + $hostname)
+    CtrlMsg.send(s, msg)
     CtrlMsg.flood()
     Thread.new {
-      CtrlMsg.callback(s)
+      CtrlMsg.receive(s)
     }
     STDOUT.puts "EDGEB: SUCCESS"
   end

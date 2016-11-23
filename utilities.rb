@@ -15,6 +15,26 @@ module Util
     f.close
   end
 
+  def Util.parse_config_file(fname)
+    f = File.open(fname, "r")
+    update_interval = mtu = ping_timeout = nil
+    f.each_line do |line|
+      line = line.strip().split("=")
+      option = line[0].upcase
+      value = Integer(line[1])
+      if option == "UPDATEINTERVAL"
+        update_interval = value
+      elsif option == "MAXPAYLOAD"
+        mtu = value
+      elsif option == "PINGTIMEOUT"
+        ping_timeout = value
+      end
+    end
+    f.close()
+
+    return update_interval, mtu, ping_timeout
+  end
+
   def Util.ipToByte(ip)
     ip_seg = ip.split('.')
     res = ""
@@ -82,6 +102,25 @@ module Util
         end
       end
     end
+  end
+
+  def Util.split_str_by_size(str, size)
+    return str.chars.each_slice(size).map(&:join)
+  end
+
+  def Util.assemble(packet_list)
+    # assert_operator packet_list.length, :>, 0
+    payload_full_str = ""
+    hdr = String.new(packet_list[0].getHeader())
+    msg = Message.new
+    msg.setHeader(hdr)
+    msg.setHeaderField("fragment_num", 0)
+    msg.setHeaderField("fragment_seq", 0)
+    packet_list.each do |packet|
+      payload_full_str += packet.getPayLoad()
+    end
+    msg.setPayLoad(payload_full_str)
+    return msg
   end
 
 end

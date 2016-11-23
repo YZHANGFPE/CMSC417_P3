@@ -3,5 +3,6 @@ test_routing.rb
 !doc.txt
 !test_commands.txt
 !nodes.txt
+!config.txt
 *.pdf
 console*
