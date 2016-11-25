@@ -18,4 +18,6 @@ $ping_timeout = nil
 $receiver_buffer = []
 $mutex = Mutex.new
 $cv = ConditionVariable.new
+$current_time = nil
+$flood_triger = 0
 

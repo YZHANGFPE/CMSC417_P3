@@ -52,33 +52,55 @@ def startServer()
 	}
 end
 
+def updateTime()
+  STDOUT.puts "In the update time"
+	loop {
+			$current_time += 0.01
+      $flood_triger += 0.01
+      if $flood_triger >= $update_interval
+        $flood_triger = 0
+        $mutex.synchronize {
+          CtrlMsg.flood()
+        }
+      end
+			sleep(0.01)
+	}
+end
+
 # do main loop here.... 
 def main()
 
 	while(line = STDIN.gets())
-		line = line.strip()
-		arr = line.split(' ')
-		cmd = arr[0]
-		args = arr[1..-1]
-		case cmd
-		when "EDGEB"; P0.edgeb(args)
-		when "EDGED"; P1.edged(args)
-		when "EDGEU"; P1.edgeu(args)
-		when "DUMPTABLE"; P0.dumptable(args)
-		when "SHUTDOWN"; P0.shutdown(args)
-		when "STATUS"; P1.status()
-		when "SENDMSG"; sendmsg(args)
-		when "PING"; ping(args)
-		when "TRACEROUTE"; traceroute(args)
-		when "FTP"; ftp(args)
-		when "CIRCUIT"; circuit(args)
-		else STDERR.puts "ERROR: INVALID COMMAND \"#{cmd}\""
-		end
+		#$mutex.synchronize {
+			line = line.strip()
+			arr = line.split(' ')
+			cmd = arr[0]
+			args = arr[1..-1]
+			case cmd
+			when "EDGEB"; P0.edgeb(args)
+			when "EDGED"; P1.edged(args)
+			when "EDGEU"; P1.edgeu(args)
+			when "DUMPTABLE"; P0.dumptable(args)
+			when "SHUTDOWN"; P0.shutdown(args)
+			when "STATUS"; P1.status()
+			when "SENDMSG"; sendmsg(args)
+			when "PING"; ping(args)
+			when "TRACEROUTE"; traceroute(args)
+			when "FTP"; ftp(args)
+			when "CIRCUIT"; circuit(args)
+			else STDERR.puts "ERROR: INVALID COMMAND \"#{cmd}\""
+			end
+		#}
 	end
 
 end
 
 def setup(hostname, port, nodes, config)
+	$current_time = Time.now
+  $flood_triger = 0
+	Thread.new {
+   	updateTime()
+  }
 	$hostname = hostname
 	$port = port
 	Util.readNodeFile(nodes)
@@ -90,7 +112,7 @@ def setup(hostname, port, nodes, config)
     	startServer()
   	}
 
-  	main()
+ 	main()
 end
 
 setup(ARGV[0], ARGV[1], ARGV[2], ARGV[3])

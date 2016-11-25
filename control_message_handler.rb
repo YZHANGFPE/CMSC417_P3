@@ -13,6 +13,8 @@ module CtrlMsg
   end
 
   def CtrlMsg.send(client, msg)
+    STDOUT.puts "In send"
+    STDOUT.puts msg.getPayLoad
     packet_list = msg.fragment()
     packet_list.each do |packet|
       client.puts(packet.toString())
@@ -20,6 +22,7 @@ module CtrlMsg
   end
 
   def CtrlMsg.receive(client)
+    STDOUT.puts "In receive"
     while msg_str = client.gets
       $mutex.synchronize {
         msg = Message.new(msg_str.chop)
@@ -50,7 +53,6 @@ module CtrlMsg
     $neighbors[dst] = 1
     $next_hop_table[dst] = dst
     $clients[dst] = client
-    STDOUT.puts "In edgeb before flood"
     CtrlMsg.flood()
     STDOUT.puts "CTRLMSG-EDGEB: SUCCESS"
   end
@@ -82,6 +84,8 @@ module CtrlMsg
   end
 
   def CtrlMsg.floodCallBack(msg)
+    STDOUT.puts "In flood call back"
+    STDOUT.puts msg.getPayLoad()
     ttl = msg.getHeaderField("ttl")
     sn = msg.getHeaderField("seq")
     if ttl == 0

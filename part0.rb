@@ -35,9 +35,9 @@ module P0
       distance = $distance_table[dst]
       output << $hostname << "," << dst << "," << next_hop << "," << distance << "\n"
     end
-    # output << $network_topology
-    # output << $distance_table
-    # output << $next_hop_table
+    output << $network_topology
+    output << $distance_table
+    output << $next_hop_table
     output.close
     STDOUT.puts "DUMPTABLE: SUCCESS"
   end
