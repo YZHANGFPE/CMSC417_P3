@@ -8,6 +8,7 @@ module CtrlMsg
     when 0; CtrlMsg.edgeb(msg.getPayLoad(), client)
     when 1; CtrlMsg.floodCallBack(msg)
     when 2; CtrlMsg.edgeu(msg.getPayLoad())
+    when 3; CtrlMsg.pingCallBack(msg)
     else STDERR.puts "ERROR: INVALID MESSAGE \"#{msg}\""
     end
   end
@@ -119,6 +120,37 @@ module CtrlMsg
       end
     end
     
+  end
+
+  def CtrlMsg.pingCallBack(msg)
+    code = msg.getHeaderField("code")
+    payload = msg.getPayLoad.split(' ')
+    src = payload[0]
+    dst = payload[1]
+    seq_id = payload[2]
+    if code == 0
+      # forwrd
+      if dst == $hostname
+        msg.setHeaderField("code", 1)
+        client = $clients[$next_hop_table[src]]
+        CtrlMsg.send(client, msg)
+      else
+        client = $clients[$next_hop_table[dst]]
+        CtrlMsg.send(client, msg)
+      end
+    else
+      # backward
+      if src == $hostname
+        if $ping_table.has_key?(seq_id)
+          rtp = $current_time - $ping_table[seq_id]
+          STDOUT.puts (seq_id + " " + dst + " " + rtp.to_s)
+          $ping_table.delete(seq_id)
+        end
+      else
+        client = $clients[$next_hop_table[src]]
+        CtrlMsg.send(client, msg)
+      end
+    end
   end
 
 end

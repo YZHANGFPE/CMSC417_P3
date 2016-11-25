@@ -20,4 +20,5 @@ $mutex = Mutex.new
 $cv = ConditionVariable.new
 $current_time = nil
 $flood_triger = 0
+$ping_table = Hash.new()
 

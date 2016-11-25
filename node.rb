@@ -3,6 +3,7 @@ require_relative 'control_message_handler'
 require_relative 'utilities'
 require_relative 'part0'
 require_relative 'part1'
+require_relative 'part2'
 require_relative 'message'
 
 # --------------------- Part 0 --------------------- # 
@@ -59,8 +60,10 @@ def updateTime()
       $flood_triger += 0.01
       if $flood_triger >= $update_interval
         $flood_triger = 0
-        $mutex.synchronize {
-          CtrlMsg.flood()
+        Thread.new {
+          $mutex.synchronize {
+            CtrlMsg.flood()
+          }
         }
       end
 			sleep(0.01)
@@ -84,7 +87,7 @@ def main()
 			when "SHUTDOWN"; P0.shutdown(args)
 			when "STATUS"; P1.status()
 			when "SENDMSG"; sendmsg(args)
-			when "PING"; ping(args)
+			when "PING"; P2.ping(args)
 			when "TRACEROUTE"; traceroute(args)
 			when "FTP"; ftp(args)
 			when "CIRCUIT"; circuit(args)

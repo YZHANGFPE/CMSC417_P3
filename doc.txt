@@ -20,7 +20,11 @@ header_field required: type(1) ttl(header index 4) seq(header index 5)
 payload: hostname \t neighbor1, dist1 \t neighbor2, dist2 \t
 receiver: update $network_topology
 
-edgeb
+edgeu
 header_field required: type(2) 
 payload: src cost
 receiver: dst = src, cost = cost
+
+ping 
+header_field required: type(3) code(0):forward code(1):backward 
+payload: src dst
