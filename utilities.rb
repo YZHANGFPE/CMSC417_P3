@@ -1,4 +1,5 @@
 require_relative 'global_variables'
+require 'set'
 
 module Util
   def Util.readNodeFile(filename)
@@ -102,6 +103,21 @@ module Util
         end
       end
     end
+  end
+
+  def Util.checkTopology()
+    # check whether the network topology is complete
+    src = []
+    neighbors = []
+    $network_topology.each do |s, nb|
+      src << s
+      nb["neighbors"].each do |s_, dist|
+        neighbors << s_
+      end
+    end
+    src = src.to_set
+    neighbors = neighbors.to_set
+    return src == neighbors
   end
 
   def Util.split_str_by_size(str, size)

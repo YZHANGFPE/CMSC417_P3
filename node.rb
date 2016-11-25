@@ -71,7 +71,7 @@ end
 def main()
 
 	while(line = STDIN.gets())
-		#$mutex.synchronize {
+		$mutex.synchronize {
 			line = line.strip()
 			arr = line.split(' ')
 			cmd = arr[0]
@@ -90,7 +90,7 @@ def main()
 			when "CIRCUIT"; circuit(args)
 			else STDERR.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 			end
-		#}
+		}
 	end
 
 end

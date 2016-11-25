@@ -3,7 +3,7 @@ class Message
   HEADER_CONFIG = {
     "type" => [0,0], # type field = [start_index, end_index]
     "code" => [1,1],
-    "checksum" => [2,3],
+    "checksum" => [19,19],
     "ttl" => [4,4],
     "seq" => [5,5],
     "fragment_num" => [6,6],
@@ -22,6 +22,7 @@ class Message
   end
 
   def toString()
+    @header[HEADER_LENGTH - 1] = checksum()
     return @header + @payload
   end
 
@@ -79,5 +80,18 @@ class Message
     end
 
     return packet_list
+  end
+
+  def checksum()
+    res = @header[0].ord
+    for i in (1..HEADER_LENGTH - 2)
+      res = res ^ (@header[i].ord)
+    end
+    return res.chr
+  end
+
+  def validate()
+    cs = checksum()
+    return cs == @header[HEADER_LENGTH - 1]
   end
 end

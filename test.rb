@@ -20,10 +20,8 @@ class TestMessage < Test::Unit::TestCase
 
   def test_setHeaderField
     msg = Message.new
-    msg.setHeaderField("type", 0)
-    assert_equal(0, msg.getHeaderField("type"))
-    msg.setHeaderField("type", 49)
-    assert_equal("1" + @@zero * (Message::HEADER_LENGTH - 1), msg.toString())
+    msg.setHeaderField("type", 1)
+    assert_equal(1, msg.getHeaderField("type"))
   end
 
   def test_empty_msg
@@ -59,6 +57,25 @@ class TestMessage < Test::Unit::TestCase
     packet_list = msg.fragment()
     res_msg = Util.assemble(packet_list)
     assert_equal(payLoad, res_msg.getPayLoad())
+  end
+
+  def test_checksum
+    msg = Message.new
+    msg.setHeaderField("type", 1)
+    payLoad = ""
+    msg.setPayLoad(payLoad)
+    msg_str = msg.toString()
+    return_msg = Message.new(msg_str)
+    assert_equal(true, return_msg.validate)
+    return_msg.setHeaderField("type", 2)
+    assert_equal(false, return_msg.validate)
+  end
+
+  def test_checkTopology
+    $network_topology = {"n4"=>{"neighbors"=>{"n3"=>1}}, "n3"=>{"sn"=>5, "neighbors"=>{"n2"=>1, "n4"=>1}}, "n1"=>{"sn"=>5, "neighbors"=>{"n2"=>1}}}
+    assert_equal(false, Util.checkTopology)
+    $network_topology = {"n4"=>{"neighbors"=>{"n3"=>1}}, "n3"=>{"sn"=>5, "neighbors"=>{"n2"=>1, "n4"=>1}}, "n1"=>{"sn"=>5, "neighbors"=>{"n2"=>1}}, "n2"=>{"sn"=>5, "neighbors"=>{"n1"=>1}}}
+    assert_equal(true, Util.checkTopology)
   end
 
 end

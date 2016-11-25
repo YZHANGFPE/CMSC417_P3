@@ -22,23 +22,28 @@ module CtrlMsg
   end
 
   def CtrlMsg.receive(client)
-    STDOUT.puts "In receive"
     while msg_str = client.gets
-      $mutex.synchronize {
-        msg = Message.new(msg_str.chop)
-        fragment_seq = msg.getHeaderField("fragment_seq")
-        fragment_num = msg.getHeaderField("fragment_num")
-        if fragment_seq == 0
-          CtrlMsg.callback(msg, client)
-        else
-          $receiver_buffer << msg
-          if fragment_num == fragment_seq
-            res_msg = Util.assemble($receiver_buffer)
-            $receiver_buffer.clear()
-            CtrlMsg.callback(res_msg, client)
+      if (msg_str.length >= Message::HEADER_LENGTH + 1 and Message.new(msg_str.chop).validate)
+        $mutex.synchronize {
+          msg = Message.new(msg_str.chop)
+          STDOUT.puts "In receive"
+          STDOUT.puts msg_str.length
+          STDOUT.puts msg.getPayLoad
+          fragment_seq = msg.getHeaderField("fragment_seq")
+          fragment_num = msg.getHeaderField("fragment_num")
+          if fragment_seq == 0
+            CtrlMsg.callback(msg, client)
+          else
+            $receiver_buffer << msg
+            if fragment_num == fragment_seq
+              res_msg = Util.assemble($receiver_buffer)
+              $receiver_buffer.clear()
+              CtrlMsg.callback(res_msg, client)
+            end
           end
-        end
-      }   
+        }   
+      end
+      sleep(0.01)
     end
   end
 
@@ -73,14 +78,16 @@ module CtrlMsg
     msg.setHeaderField("ttl", $port_table.length)
     msg.setHeaderField("seq", Util.nextSeqNum())
     msg_str = $hostname + "\t"
-    $neighbors.each do |dst, distance|
-      msg_str += dst + "," + distance.to_s + "\t"
+    if $neighbors.length > 0
+      $neighbors.each do |dst, distance|
+        msg_str += dst + "," + distance.to_s + "\t"
+      end
+      msg.setPayLoad(msg_str)
+      $clients.each do |dst, client|  
+        CtrlMsg.send(client, msg)
+      end
+      STDOUT.puts "CTRLMSG-FLOOD: SUCCESS"
     end
-    msg.setPayLoad(msg_str)
-    $clients.each do |dst, client|  
-      CtrlMsg.send(client, msg)
-    end
-    STDOUT.puts "CTRLMSG-FLOOD: SUCCESS"
   end
 
   def CtrlMsg.floodCallBack(msg)
@@ -105,7 +112,9 @@ module CtrlMsg
         $clients.each do |dst, client|
           CtrlMsg.send(client, msg)
         end
-        Util.updateRoutingTable()
+        if Util.checkTopology
+          Util.updateRoutingTable()
+        end
         STDOUT.puts "CTRLMSG-FLOODCALLBACK: SUCCESS"
       end
     end

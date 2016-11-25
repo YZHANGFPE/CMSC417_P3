@@ -63,7 +63,7 @@ NODE n2 EDGEB 127.0.0.1 127.0.0.1 n3
 NODE n3 EDGEB 127.0.0.1 127.0.0.1 n4
 
 seperate
-ruby node.rb n1 10591 nodes.txt config.txt
-ruby node.rb n2 10592 nodes.txt config.txt
-ruby node.rb n3 10593 nodes.txt config.txt
-ruby node.rb n4 10594 nodes.txt config.txt
+ruby node.rb n1 10951 nodes.txt config.txt
+ruby node.rb n2 10952 nodes.txt config.txt
+ruby node.rb n3 10953 nodes.txt config.txt
+ruby node.rb n4 10954 nodes.txt config.txt
