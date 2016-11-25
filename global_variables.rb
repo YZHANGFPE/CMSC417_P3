@@ -21,4 +21,6 @@ $cv = ConditionVariable.new
 $current_time = nil
 $flood_triger = 0
 $ping_table = Hash.new()
+$traceroute_finish = true
+$expect_hop_count = "1"
 

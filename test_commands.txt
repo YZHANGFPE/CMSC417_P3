@@ -62,6 +62,15 @@ NODE n1 EDGEB 127.0.0.1 127.0.0.1 n2
 NODE n2 EDGEB 127.0.0.1 127.0.0.1 n3
 NODE n3 EDGEB 127.0.0.1 127.0.0.1 n4
 NODE n1 PING n4 3 1
+NODE n1 PING n3 3 1
+
+traceroute
+ruby controller.rb nodes.txt config
+NODE n1 EDGEB 127.0.0.1 127.0.0.1 n2
+NODE n2 EDGEB 127.0.0.1 127.0.0.1 n3
+NODE n3 EDGEB 127.0.0.1 127.0.0.1 n4
+NODE n1 TRACEROUTE n4 
+NODE n1 TRACEROUTE n3 
 
 test
 ruby controller.rb nodes.txt config

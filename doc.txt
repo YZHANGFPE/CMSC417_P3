@@ -27,4 +27,10 @@ receiver: dst = src, cost = cost
 
 ping 
 header_field required: type(3) code(0):forward code(1):backward 
-payload: src dst
+payload: src dst seq_id
+
+trace route
+header_field required: type(4) code(0):forward code(1):backward 
+
+forward_payload: src dst hostid hopcount start_time
+backward_payload: src dst hostid hopcount time_to_node

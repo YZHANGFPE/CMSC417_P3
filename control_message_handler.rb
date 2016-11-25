@@ -9,13 +9,14 @@ module CtrlMsg
     when 1; CtrlMsg.floodCallBack(msg)
     when 2; CtrlMsg.edgeu(msg.getPayLoad())
     when 3; CtrlMsg.pingCallBack(msg)
+    when 4; CtrlMsg.tracerouteCallBack(msg)
     else STDERR.puts "ERROR: INVALID MESSAGE \"#{msg}\""
     end
   end
 
   def CtrlMsg.send(client, msg)
-    STDOUT.puts "In send"
-    STDOUT.puts msg.getPayLoad
+#     STDOUT.puts "In send"
+#     STDOUT.puts msg.getPayLoad
     packet_list = msg.fragment()
     packet_list.each do |packet|
       client.puts(packet.toString())
@@ -27,9 +28,9 @@ module CtrlMsg
       if (msg_str.length >= Message::HEADER_LENGTH + 1 and Message.new(msg_str.chop).validate)
         $mutex.synchronize {
           msg = Message.new(msg_str.chop)
-          STDOUT.puts "In receive"
-          STDOUT.puts msg_str.length
-          STDOUT.puts msg.getPayLoad
+#           STDOUT.puts "In receive"
+#           STDOUT.puts msg_str.length
+#           STDOUT.puts msg.getPayLoad
           fragment_seq = msg.getHeaderField("fragment_seq")
           fragment_num = msg.getHeaderField("fragment_num")
           if fragment_seq == 0
@@ -87,13 +88,13 @@ module CtrlMsg
       $clients.each do |dst, client|  
         CtrlMsg.send(client, msg)
       end
-      STDOUT.puts "CTRLMSG-FLOOD: SUCCESS"
+#       STDOUT.puts "CTRLMSG-FLOOD: SUCCESS"
     end
   end
 
   def CtrlMsg.floodCallBack(msg)
-    STDOUT.puts "In flood call back"
-    STDOUT.puts msg.getPayLoad()
+#     STDOUT.puts "In flood call back"
+#     STDOUT.puts msg.getPayLoad()
     ttl = msg.getHeaderField("ttl")
     sn = msg.getHeaderField("seq")
     if ttl == 0
@@ -116,7 +117,7 @@ module CtrlMsg
         if Util.checkTopology
           Util.updateRoutingTable()
         end
-        STDOUT.puts "CTRLMSG-FLOODCALLBACK: SUCCESS"
+#         STDOUT.puts "CTRLMSG-FLOODCALLBACK: SUCCESS"
       end
     end
     
@@ -145,6 +146,46 @@ module CtrlMsg
           rtp = $current_time - $ping_table[seq_id]
           STDOUT.puts (seq_id + " " + dst + " " + rtp.to_s)
           $ping_table.delete(seq_id)
+        end
+      else
+        client = $clients[$next_hop_table[src]]
+        CtrlMsg.send(client, msg)
+      end
+    end
+  end
+
+  def CtrlMsg.tracerouteCallBack(msg)
+    code = msg.getHeaderField("code")
+    payload = msg.getPayLoad.split(' ')
+    src = payload[0]
+    dst = payload[1]
+    host_id = payload[2]
+    hop_count = payload[3]
+    time = payload[4]
+    if code == 0
+      # forwrd
+      hop_count = (hop_count.to_i + 1).to_s
+      ret_payload = Array.new(payload)
+      ret_payload[2] = $hostname
+      ret_payload[3] = hop_count
+      ret_payload[4] = ($current_time.to_f.round(4) - time.to_f).round(4).abs.to_s
+      ret_msg = Message.new
+      ret_msg.setHeaderField("type", 4)
+      ret_msg.setHeaderField("code", 1)
+      ret_msg.setPayLoad(ret_payload.join(" "))
+      CtrlMsg.send($clients[$next_hop_table[src]], ret_msg)
+      if dst != $hostname
+        payload[3] = hop_count
+        msg.setPayLoad(payload.join(" "))
+        CtrlMsg.send($clients[$next_hop_table[dst]], msg)
+      end
+    else
+      # backward
+      if src == $hostname
+        STDOUT.puts(hop_count + " " + host_id + " " + time)
+        $expect_hop_count = (hop_count.to_i + 1).to_s
+        if host_id == dst 
+          $traceroute_finish = true
         end
       else
         client = $clients[$next_hop_table[src]]

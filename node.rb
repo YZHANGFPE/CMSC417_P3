@@ -54,7 +54,6 @@ def startServer()
 end
 
 def updateTime()
-  STDOUT.puts "In the update time"
 	loop {
 			$current_time += 0.01
       $flood_triger += 0.01
@@ -74,7 +73,7 @@ end
 def main()
 
 	while(line = STDIN.gets())
-		$mutex.synchronize {
+# 		$mutex.synchronize {
 			line = line.strip()
 			arr = line.split(' ')
 			cmd = arr[0]
@@ -88,12 +87,12 @@ def main()
 			when "STATUS"; P1.status()
 			when "SENDMSG"; sendmsg(args)
 			when "PING"; P2.ping(args)
-			when "TRACEROUTE"; traceroute(args)
+			when "TRACEROUTE"; P2.traceroute(args)
 			when "FTP"; ftp(args)
 			when "CIRCUIT"; circuit(args)
 			else STDERR.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 			end
-		}
+# 		}
 	end
 
 end
