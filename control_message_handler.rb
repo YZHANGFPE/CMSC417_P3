@@ -10,6 +10,8 @@ module CtrlMsg
     when 2; CtrlMsg.edgeu(msg.getPayLoad())
     when 3; CtrlMsg.pingCallBack(msg)
     when 4; CtrlMsg.tracerouteCallBack(msg)
+    when $SENDMSG_HEADER_TYPE; CtrlMsg.sendmsgCallBack(msg, client)
+    when $FTP_HEADER_TYPE; CtrlMsg.ftpCallBack(msg, client)
     else STDERR.puts "ERROR: INVALID MESSAGE \"#{msg}\""
     end
   end
@@ -19,8 +21,14 @@ module CtrlMsg
 #     STDOUT.puts msg.getPayLoad
     packet_list = msg.fragment()
     packet_list.each do |packet|
-      client.puts(packet.toString())
-    end   
+      to_send = packet.toString() + "\n"
+      num_bytes = to_send.bytesize()
+      check = client.write(to_send)
+      if check < num_bytes
+        return false
+      end
+    end
+    return true
   end
 
   def CtrlMsg.receive(client)
@@ -191,6 +199,47 @@ module CtrlMsg
         client = $clients[$next_hop_table[src]]
         CtrlMsg.send(client, msg)
       end
+    end
+  end
+
+  def CtrlMsg.sendmsgCallBack(msg, client)
+    code = msg.getHeaderField("code")
+    payload = msg.getPayLoad().split(" ")
+    src = payload.shift()
+    dst = payload.shift()
+    if dst == $hostname
+      payload = payload.join(" ")
+      to_print = "SENDMSG: %s -- > %s"
+      STDOUT.puts(to_print % [src, payload])
+    else
+      forward_client = $clients[$next_hop_table[dst]]
+      CtrlMsg.send(forward_client, msg)
+    end
+  end
+  
+  def CtrlMsg.ftpCallBack(msg, client)
+    payload = msg.getPayLoad().split($DELIM)
+    src = payload.shift()
+    dst = payload.shift()
+    if dst == $hostname  
+      file_size_ideal = payload.shift().to_i()
+      fname = payload.shift()
+      fpath = payload.shift()
+      file_content = payload.join($DELIM).gsub($IMPROBABLE_STRING, "\n")
+      
+      success_output = "FTP: #{src} -- > #{fpath}/#{fname}"
+      error_output = "FTP ERROR: #{src} -- > #{fpath}/#{fname}"
+
+      file_size_actual = file_content.bytesize()
+      #if file_size_actual < file_size_ideal
+      #  STDOUT.puts(error_output)
+      #else
+      File.write(fpath + "/" + fname, file_content)
+      STDOUT.puts(success_output)
+      #end
+    else
+      forward_client = $clients[$next_hop_table[dst]]
+      CtrlMsg.send(forward_client, msg)
     end
   end
 

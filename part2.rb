@@ -1,6 +1,7 @@
 require_relative 'global_variables'
 require_relative 'control_message_handler'
 require_relative 'message'
+require_relative 'debug'
 
 module P2
   def P2.ping(cmd)
@@ -61,4 +62,102 @@ module P2
     end
     STDOUT.puts("TIMEOUT ON HOPCOUNT " + $expect_hop_count)
   end
+
+  def P2.sendmsg(cmd)
+    Debug.assert { cmd.length() >= 2 }
+    Debug.assert { cmd.kind_of?(Array) }
+    
+    dst = cmd[0]
+    msg = $hostname + " " + dst + " " + cmd[1..-1].join(" ")
+  
+    error_msg = "SENDMSG ERROR: HOST UNREACHABLE"
+
+    # Make sure dst is reachable
+    if ($next_hop_table.include?(dst) && $next_hop_table[dst] != "NA" &&
+        $clients.has_key?($next_hop_table[dst]))
+      next_hop = $next_hop_table[dst]
+      client = $clients[next_hop]
+    else
+      STDOUT.puts(error_msg)
+      return
+    end
+    
+    # Construct the packet
+    packet = Message.new()
+    packet.setHeaderField("type", $SENDMSG_HEADER_TYPE)
+    packet.setHeaderField("code", 0)
+    packet.setPayLoad(msg)
+
+    success = CtrlMsg.send(client, packet)
+    if !success
+      STDOUT.puts(error_msg)
+    end
+  end
+  
+  def P2.ftp(cmd)
+    Debug.assert { cmd.length() >= 3 }
+    Debug.assert { cmd.kind_of?(Array) }
+    
+    dst,fname,fpath = cmd[0], cmd[1], cmd[2]
+
+    success_output = "FTP #{fname} -- > #{dst} in %s at %s"
+    error_output = "FTP ERROR: #{fname} -- > #{dst} INTERRUPTED AFTER %s"
+    
+    # Make sure dst is reachable
+    if ($next_hop_table.include?(dst) && $next_hop_table[dst] != "NA" &&
+        $clients.has_key?($next_hop_table[dst]))
+      next_hop = $next_hop_table[dst]
+      client = $clients[next_hop]
+    else
+      STDOUT.puts(error_output % ["0"])
+      return
+    end
+
+    # Construct the packet, keeping tabs on its length
+    file_obj = File.open(fname, "r")
+    file_contents = file_obj.read().gsub("\n",$IMPROBABLE_STRING)
+    file_obj.close()
+
+    file_size = file_contents.bytesize()
+    msg = [$hostname, dst, file_size.to_s(), fname, fpath, file_contents].join($DELIM)
+    msg_offset = msg.bytesize() - file_size
+
+    packet = Message.new()
+    packet.setHeaderField("type", $FTP_HEADER_TYPE)
+    packet.setHeaderField("code", 0)
+    packet.setPayLoad(msg)
+    header_offset = packet.toString().bytesize() - msg_offset - file_size + "\n".bytesize()
+
+    packet_offset = msg_offset
+    total_bytes_sent = 0
+
+    # Send the (fragmented) packet, keeping tabs on how many bytes reach the
+    # destination
+    packet_list = packet.fragment()
+    t_start = $current_time
+    
+    packet_list.each do |packet|
+      to_send = packet.toString() + "\n"
+      packet_offset += header_offset
+      num_bytes = to_send.bytesize()
+      check = client.write(to_send)
+      total_bytes_sent += check
+      
+      if check < num_bytes
+        bytes_from_file_sent = total_bytes_sent - packet_offset
+        STDOUT.puts(error_output % [bytes_from_file_sent])
+        return
+      end
+    end
+    
+    t_end = $current_time
+    t_total = t_end - t_start
+
+    bytes_from_file_sent = total_bytes_sent - packet_offset
+    speed = bytes_from_file_sent / t_total
+
+    STDOUT.puts(success_output % [t_total, speed])
+
+  end
+
 end

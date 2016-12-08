@@ -24,3 +24,14 @@ $ping_table = Hash.new()
 $traceroute_finish = true
 $expect_hop_count = "1"
 
+# SENDMSG Constants and fields
+$SENDMSG_HEADER_TYPE = 20
+
+# FTP Constants and fields
+$FTP_HEADER_TYPE = 21
+
+# The delimiter for elements of a message. I noticed just using " " caused errors with other
+# whitespace.
+$DELIM = "~"
+$IMPROBABLE_STRING = "!@$!@%$!@$^&$^"
+

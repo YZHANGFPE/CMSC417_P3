@@ -5,6 +5,8 @@ require_relative 'part0'
 require_relative 'part1'
 require_relative 'part2'
 require_relative 'message'
+require_relative 'debug'
+
 
 # --------------------- Part 0 --------------------- # 
 
@@ -72,6 +74,8 @@ end
 # do main loop here.... 
 def main()
 
+  #Debug.disable()
+
 	while(line = STDIN.gets())
 # 		$mutex.synchronize {
 			line = line.strip()
@@ -85,10 +89,10 @@ def main()
 			when "DUMPTABLE"; P0.dumptable(args)
 			when "SHUTDOWN"; P0.shutdown(args)
 			when "STATUS"; P1.status()
-			when "SENDMSG"; sendmsg(args)
+			when "SENDMSG"; P2.sendmsg(args)
 			when "PING"; P2.ping(args)
 			when "TRACEROUTE"; P2.traceroute(args)
-			when "FTP"; ftp(args)
+			when "FTP"; P2.ftp(args)
 			when "CIRCUIT"; circuit(args)
 			else STDERR.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 			end
