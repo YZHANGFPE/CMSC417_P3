@@ -4,11 +4,22 @@ require_relative 'message'
 require_relative 'debug'
 
 module P2
-  def P2.ping(cmd)
+  def P2.ping(cmd, circuit = false, circuit_id = nil)
     dst = cmd[0]
     next_hop = $next_hop_table[dst]
+    if circuit
+      if $circuit_table.has_key?(circuit_id) and $circuit_table[circuit_id].has_key?(dst)
+        next_hop = $circuit_table[circuit_id][dst]
+      else
+        next_hop = "NA"
+      end
+    end
     if next_hop == "NA" || next_hop == $hostname
-      STDOUT.puts "PING ERROR: HOST UNREACHABLE"
+      if circuit
+        STDOUT.puts ("CIRCUIT #{circuit_id} /" + "PING ERROR: HOST UNREACHABLE")
+      else
+        STDOUT.puts "PING ERROR: HOST UNREACHABLE"
+      end
       return
     end
     n = cmd[1].to_i
@@ -19,13 +30,21 @@ module P2
       msg.setHeaderField("type", 3)
       msg.setHeaderField("code", 0)
       msg.setPayLoad($hostname + " " + dst + " " + seq_id.to_s)
+      if circuit
+        msg.setHeaderField("circuit", 1)
+        msg.setPayLoad($hostname + " " + dst + " " + seq_id.to_s + " " + circuit_id)
+      end
       $ping_table[seq_id.to_s] = $current_time
       CtrlMsg.send(client, msg)
       Thread.new {
         seq_id_ = seq_id
         sleep($ping_timeout)
         if $ping_table.has_key?(seq_id_.to_s)
-          STDOUT.puts "PING ERROR: HOST UNREACHABLE"
+          if circuit
+            STDOUT.puts ("CIRCUIT #{circuit_id} /" + "PING ERROR: HOST UNREACHABLE")
+          else
+            STDOUT.puts "PING ERROR: HOST UNREACHABLE"
+          end
         end
         $ping_table.delete(seq_id_.to_s)
       }
@@ -33,14 +52,29 @@ module P2
     end
   end
 
-  def P2.traceroute(cmd)
+  def P2.traceroute(cmd, circuit = false, circuit_id = nil)
     dst = cmd[0]
     next_hop = $next_hop_table[dst]
+    if circuit
+      if $circuit_table.has_key?(circuit_id) and $circuit_table[circuit_id].has_key?(dst)
+        next_hop = $circuit_table[circuit_id][dst]
+      else
+        next_hop = "NA"
+      end
+    end
     if next_hop == "NA"
-      STDOUT.puts "TRACEROUTE ERROR: HOST UNREACHABLE"
+      if circuit
+        STDOUT.puts ("CIRCUIT " + circuit_id + " /" + "TRACEROUTE ERROR: HOST UNREACHABLE")
+      else
+        STDOUT.puts "TRACEROUTE ERROR: HOST UNREACHABLE"
+      end
       return
     end
-    STDOUT.puts("0 " + $hostname + " 0.00")
+    if circuit
+      STDOUT.puts("CIRCUIT #{circuit_id} /" + "0 " + $hostname + " 0.00")
+    else
+      STDOUT.puts("0 " + $hostname + " 0.00")
+    end
     if next_hop == $hostname
       return
     end
@@ -49,21 +83,33 @@ module P2
     msg.setHeaderField("type", 4)
     msg.setHeaderField("code", 0)
     msg.setPayLoad($hostname + " " + dst + " " + dst + " 0 " + $current_time.to_f.round(4).to_s)
+    if circuit
+      msg.setHeaderField("circuit", 1)
+      msg.setPayLoad($hostname + " " + dst + " " + dst + " 0 " + $current_time.to_f.round(4).to_s + " " + circuit_id)
+    end
     $traceroute_finish = false
     $expect_hop_count = "1"
     CtrlMsg.send(client, msg)
     start_time = $current_time
     while $current_time - start_time < $ping_timeout
       if $traceroute_finish
-        STDOUT.puts "TRACEROUTE: SUCCESS"
+        if circuit
+          STDOUT.puts ("CIRCUIT " + circuit_id + " /" + "TRACEROUTE: SUCCESS")
+        else
+          STDOUT.puts "TRACEROUTE: SUCCESS"
+        end
         return
       end
       sleep(0.1)
     end
-    STDOUT.puts("TIMEOUT ON HOPCOUNT " + $expect_hop_count)
+    if circuit
+      STDOUT.puts("CIRCUIT " + circuit_id + " /" +"TIMEOUT ON HOPCOUNT " + $expect_hop_count)
+    else
+      STDOUT.puts("TIMEOUT ON HOPCOUNT " + $expect_hop_count)
+    end
   end
 
-  def P2.sendmsg(cmd)
+  def P2.sendmsg(cmd, circuit = false, circuit_id = nil)
     Debug.assert { cmd.length() >= 2 }
     Debug.assert { cmd.kind_of?(Array) }
     
@@ -94,7 +140,7 @@ module P2
     end
   end
   
-  def P2.ftp(cmd)
+  def P2.ftp(cmd, circuit = false, circuit_id = nil)
     Debug.assert { cmd.length() >= 3 }
     Debug.assert { cmd.kind_of?(Array) }
     

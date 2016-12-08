@@ -72,6 +72,37 @@ NODE n3 EDGEB 127.0.0.1 127.0.0.1 n4
 NODE n1 TRACEROUTE n4 
 NODE n1 TRACEROUTE n3 
 
+circuitb
+ruby controller.rb nodes.txt config
+NODE n1 EDGEB 127.0.0.1 127.0.0.1 n2
+NODE n2 EDGEB 127.0.0.1 127.0.0.1 n3
+NODE n3 EDGEB 127.0.0.1 127.0.0.1 n4
+NODE n1 CIRCUITB test1 n4 n2,n3
+
+circuitb(failed)
+ruby controller.rb nodes.txt config
+NODE n1 EDGEB 127.0.0.1 127.0.0.1 n2
+NODE n2 EDGEB 127.0.0.1 127.0.0.1 n3
+NODE n1 CIRCUITB test1 n4 n2,n3
+
+circuitm
+ruby controller.rb nodes.txt config
+NODE n1 EDGEB 127.0.0.1 127.0.0.1 n2
+NODE n2 EDGEB 127.0.0.1 127.0.0.1 n3
+NODE n3 EDGEB 127.0.0.1 127.0.0.1 n4
+NODE n1 CIRCUITB test1 n4 n2,n3
+NODE n1 CIRCUITM test1 PING n4 3 1
+NODE n1 CIRCUITM test PING n4 3 1 (failed)
+NODE n1 CIRCUITM test1 TRACEROUTE n4 
+
+circuitd
+ruby controller.rb nodes.txt config
+NODE n1 EDGEB 127.0.0.1 127.0.0.1 n2
+NODE n2 EDGEB 127.0.0.1 127.0.0.1 n3
+NODE n3 EDGEB 127.0.0.1 127.0.0.1 n4
+NODE n1 CIRCUITB test1 n4 n2,n3
+NODE n1 CIRCUITD test1
+
 test
 ruby controller.rb nodes.txt config
 NODE n1 EDGEB 127.0.0.1 127.0.0.1 n2

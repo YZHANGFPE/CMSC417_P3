@@ -12,6 +12,8 @@ module CtrlMsg
     when 4; CtrlMsg.tracerouteCallBack(msg)
     when $SENDMSG_HEADER_TYPE; CtrlMsg.sendmsgCallBack(msg, client)
     when $FTP_HEADER_TYPE; CtrlMsg.ftpCallBack(msg, client)
+    when 7; CtrlMsg.circuitbCallBack(msg)
+    when 8; CtrlMsg.circuitdCallBack(msg)
     else STDERR.puts "ERROR: INVALID MESSAGE \"#{msg}\""
     end
   end
@@ -133,18 +135,29 @@ module CtrlMsg
 
   def CtrlMsg.pingCallBack(msg)
     code = msg.getHeaderField("code")
+    circuit = (msg.getHeaderField("circuit") == 1)
     payload = msg.getPayLoad.split(' ')
     src = payload[0]
     dst = payload[1]
     seq_id = payload[2]
+    circuit_id = nil
+    if circuit
+      circuit_id = payload[3]
+    end
     if code == 0
       # forwrd
       if dst == $hostname
         msg.setHeaderField("code", 1)
         client = $clients[$next_hop_table[src]]
+        if circuit
+          client = $clients[$circuit_table[circuit_id][src]]
+        end
         CtrlMsg.send(client, msg)
       else
         client = $clients[$next_hop_table[dst]]
+        if circuit
+          client = $clients[$circuit_table[circuit_id][dst]]
+        end
         CtrlMsg.send(client, msg)
       end
     else
@@ -152,11 +165,18 @@ module CtrlMsg
       if src == $hostname
         if $ping_table.has_key?(seq_id)
           rtp = $current_time - $ping_table[seq_id]
-          STDOUT.puts (seq_id + " " + dst + " " + rtp.to_s)
+          if circuit
+            STDOUT.puts ("CIRCUIT " + circuit_id + " /" + seq_id + " " + dst + " " + rtp.to_s)
+          else
+            STDOUT.puts (seq_id + " " + dst + " " + rtp.to_s)
+          end
           $ping_table.delete(seq_id)
         end
       else
         client = $clients[$next_hop_table[src]]
+        if circuit
+          client = $clients[$circuit_table[circuit_id][src]]
+        end
         CtrlMsg.send(client, msg)
       end
     end
@@ -164,12 +184,17 @@ module CtrlMsg
 
   def CtrlMsg.tracerouteCallBack(msg)
     code = msg.getHeaderField("code")
+    circuit = (msg.getHeaderField("circuit") == 1)
     payload = msg.getPayLoad.split(' ')
     src = payload[0]
     dst = payload[1]
     host_id = payload[2]
     hop_count = payload[3]
     time = payload[4]
+    circuit_id = nil
+    if circuit
+      circuit_id = payload[5]
+    end
     if code == 0
       # forwrd
       hop_count = (hop_count.to_i + 1).to_s
@@ -180,23 +205,41 @@ module CtrlMsg
       ret_msg = Message.new
       ret_msg.setHeaderField("type", 4)
       ret_msg.setHeaderField("code", 1)
+      if circuit
+        ret_msg.setHeaderField("circuit", 1)
+      end
       ret_msg.setPayLoad(ret_payload.join(" "))
-      CtrlMsg.send($clients[$next_hop_table[src]], ret_msg)
+      if circuit
+        CtrlMsg.send($clients[$circuit_table[circuit_id][src]], ret_msg)
+      else
+        CtrlMsg.send($clients[$next_hop_table[src]], ret_msg)
+      end
       if dst != $hostname
         payload[3] = hop_count
         msg.setPayLoad(payload.join(" "))
-        CtrlMsg.send($clients[$next_hop_table[dst]], msg)
+        if circuit
+          CtrlMsg.send($clients[$circuit_table[circuit_id][dst]], msg)
+        else
+          CtrlMsg.send($clients[$next_hop_table[dst]], msg)
+        end
       end
     else
       # backward
       if src == $hostname
-        STDOUT.puts(hop_count + " " + host_id + " " + time)
+        if circuit
+          STDOUT.puts("CIRCUIT " + circuit_id + " /" +hop_count + " " + host_id + " " + time)
+        else
+          STDOUT.puts(hop_count + " " + host_id + " " + time)
+        end
         $expect_hop_count = (hop_count.to_i + 1).to_s
         if host_id == dst 
           $traceroute_finish = true
         end
       else
         client = $clients[$next_hop_table[src]]
+        if circuit
+          client = $clients[$circuit_table[circuit_id][src]]
+        end
         CtrlMsg.send(client, msg)
       end
     end
@@ -243,4 +286,148 @@ module CtrlMsg
     end
   end
 
+  def CtrlMsg.circuitbCallBack(msg)
+    code = msg.getHeaderField("code")
+    payload = msg.getPayLoad.split(' ')
+    id = payload[0]
+    dst = payload[1]
+    from = payload[2]
+    hops = payload[3]
+    src = payload[4]
+    hops_array = hops.split(",")
+    found_circuit = ($circuit_table.length > 0)
+    if code == 0
+      $circuit_table[id] = Hash.new
+      if dst == $hostname
+        prev_hop = from
+        hops_array.each do |h|
+          $circuit_table[id][h] = prev_hop
+        end
+        $circuit_table[id][src] = prev_hop
+        STDOUT.puts "CIRCUIT #{src}/#{id} --> #{dst} over #{hops}"
+        msg = Message.new
+        msg.setHeaderField("type", 7)
+        msg.setHeaderField("code", 1)
+        payload = id + " " + dst + " " + $hostname + " " + hops + " " + src
+        msg.setPayLoad(payload)
+        CtrlMsg.send($clients[prev_hop], msg)
+      else
+        current_i = hops_array.rindex($hostname)
+        if current_i >0
+          for i in 0..(current_i - 1)
+            $circuit_table[id][hops_array[i]] = hops_array[current_i - 1]
+          end
+        end
+        prev_hop = from
+        $circuit_table[id][src] = prev_hop
+        if (current_i + 1) <= (hops_array.length - 1)
+          for i in (current_i + 1)..(hops_array.length - 1)
+            $circuit_table[id][hops_array[i]] = hops_array[current_i + 1]
+          end
+        end
+        next_hop = hops_array[current_i + 1]
+        if next_hop == nil
+          next_hop = dst
+        end
+        $circuit_table[id][dst] = next_hop
+        client = $clients[next_hop]
+        if (client == nil or found_circuit)
+          $circuit_table.clear
+          msg = Message.new
+          msg.setHeaderField("type", 7)
+          msg.setHeaderField("code", 2)
+          payload = id + " " + dst + " " + $hostname + " " + hops + " " + src + " " + next_hop
+          msg.setPayLoad(payload)
+          CtrlMsg.send($clients[prev_hop], msg)
+        else
+          msg = Message.new
+          msg.setHeaderField("type", 7)
+          payload = id + " " + dst + " " + $hostname + " " + hops + " " + src
+          msg.setPayLoad(payload)
+          CtrlMsg.send($clients[next_hop], msg)
+        end
+      end
+    else
+      if src == $hostname
+        if code == 1
+          STDOUT.puts "CIRCUITB #{id} --> #{dst} over #{hops}"
+        else
+          $circuit_table.clear
+          fnode = payload[5]
+          STDOUT.puts "CIRCUIT ERROR: #{src} -/-> #{dst} FAILED AT #{fnode}"
+        end
+      else
+        if code == 2
+          $circuit_table.clear
+        end
+        current_i = hops_array.rindex($hostname)
+        prev_hop = hops_array[current_i - 1]
+        if current_i == 0
+          prev_hop = src
+        end
+        CtrlMsg.send($clients[prev_hop], msg)
+      end
+    end
+  end
+
+  def CtrlMsg.circuitdCallBack(msg)
+    code = msg.getHeaderField("code")
+    payload = msg.getPayLoad.split(' ')
+    id = payload[0]
+    dst = payload[1]
+    from = payload[2]
+    hops = payload[3]
+    src = payload[4]
+    hops_array = hops.split(",")
+    $circuit_table.clear
+    if code == 0
+      if dst == $hostname
+        prev_hop = from
+        msg = Message.new
+        msg.setHeaderField("type", 8)
+        msg.setHeaderField("code", 1)
+        payload = id + " " + dst + " " + $hostname + " " + hops + " " + src
+        msg.setPayLoad(payload)
+        CtrlMsg.send($clients[prev_hop], msg)
+      else
+        current_i = hops_array.rindex($hostname)
+        prev_hop = from
+        next_hop = hops_array[current_i + 1]
+        if next_hop == nil
+          next_hop = dst
+        end
+        client = $clients[next_hop]
+        if (client == nil)
+          msg = Message.new
+          msg.setHeaderField("type", 8)
+          msg.setHeaderField("code", 2)
+          payload = id + " " + dst + " " + $hostname + " " + hops + " " + src + " " + next_hop
+          msg.setPayLoad(payload)
+          CtrlMsg.send($clients[prev_hop], msg)
+        else
+          msg = Message.new
+          msg.setHeaderField("type", 8)
+          payload = id + " " + dst + " " + $hostname + " " + hops + " " + src
+          msg.setPayLoad(payload)
+          CtrlMsg.send($clients[next_hop], msg)
+        end
+      end
+    else
+      if src == $hostname
+        if code == 1
+          STDOUT.puts "CIRCUITD #{id} --> #{dst} over #{hops}"
+        else
+          fnode = payload[5]
+          STDOUT.puts "CIRCUIT ERROR: #{src} -/-> #{dst} FAILED AT #{fnode}"
+        end
+      else
+        current_i = hops_array.rindex($hostname)
+        prev_hop = hops_array[current_i - 1]
+        if current_i == 0
+          prev_hop = src
+        end
+        CtrlMsg.send($clients[prev_hop], msg)
+      end
+    end
+  end
 end

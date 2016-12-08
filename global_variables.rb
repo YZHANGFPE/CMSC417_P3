@@ -23,6 +23,8 @@ $flood_triger = 0
 $ping_table = Hash.new()
 $traceroute_finish = true
 $expect_hop_count = "1"
+$circuit_table = Hash.new()
+$circuit_info = Hash.new()
 
 # SENDMSG Constants and fields
 $SENDMSG_HEADER_TYPE = 20

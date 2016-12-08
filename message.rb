@@ -8,6 +8,7 @@ class Message
     "seq" => [5,5],
     "fragment_num" => [6,6],
     "fragment_seq" => [7,7],
+    "circuit" => [8,8],
   }
 
   def initialize(msg = nil)

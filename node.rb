@@ -4,6 +4,7 @@ require_relative 'utilities'
 require_relative 'part0'
 require_relative 'part1'
 require_relative 'part2'
+require_relative 'part3'
 require_relative 'message'
 require_relative 'debug'
 
@@ -93,7 +94,9 @@ def main()
 			when "PING"; P2.ping(args)
 			when "TRACEROUTE"; P2.traceroute(args)
 			when "FTP"; P2.ftp(args)
-			when "CIRCUIT"; circuit(args)
+			when "CIRCUITB"; P3.circuitb(args)
+			when "CIRCUITD"; P3.circuitd(args)
+			when "CIRCUITM"; P3.circuitm(args)
 			else STDERR.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 			end
 # 		}

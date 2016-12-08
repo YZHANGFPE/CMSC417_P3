@@ -38,6 +38,7 @@ module P0
     output << $network_topology
     output << $distance_table
     output << $next_hop_table
+    output << $circuit_table
     output.close
     STDOUT.puts "DUMPTABLE: SUCCESS"
   end
