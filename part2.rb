@@ -114,25 +114,46 @@ module P2
     Debug.assert { cmd.kind_of?(Array) }
     
     dst = cmd[0]
-    msg = $hostname + " " + dst + " " + cmd[1..-1].join(" ")
+   
+    circuit_id_str = circuit_id.to_s()
+    if circuit_id == nil
+      circuit_id_str = "nil"
+    end
+    msg = circuit_id_str + " " + $hostname + " " + dst + " " + cmd[1..-1].join(" ")
   
     error_msg = "SENDMSG ERROR: HOST UNREACHABLE"
 
     # Make sure dst is reachable
-    if ($next_hop_table.include?(dst) && $next_hop_table[dst] != "NA" &&
+    if circuit
+      Debug.assert {circuit_id != nil}
+      error_msg = "CIRCUIT #{circuit_id}/" + error_msg
+      if $circuit_table.has_key?(circuit_id) && $circuit_table[circuit_id].has_key?(dst)
+        next_hop = $circuit_table[circuit_id][dst]
+      else
+        STDOUT.puts(error_msg)
+        return
+      end
+    elsif ($next_hop_table.include?(dst) && $next_hop_table[dst] != "NA" &&
         $clients.has_key?($next_hop_table[dst]))
       next_hop = $next_hop_table[dst]
-      client = $clients[next_hop]
     else
       STDOUT.puts(error_msg)
       return
     end
+    
+    client = $clients[next_hop]
     
     # Construct the packet
     packet = Message.new()
     packet.setHeaderField("type", $SENDMSG_HEADER_TYPE)
     packet.setHeaderField("code", 0)
     packet.setPayLoad(msg)
+    
+    if circuit
+      packet.setHeaderField("circuit", 1)
+    else
+      packet.setHeaderField("circuit", 0)
+    end
 
     success = CtrlMsg.send(client, packet)
     if !success
@@ -149,28 +170,57 @@ module P2
     success_output = "FTP #{fname} -- > #{dst} in %s at %s"
     error_output = "FTP ERROR: #{fname} -- > #{dst} INTERRUPTED AFTER %s"
     
+
+    if circuit_id == nil
+      circuit_id_str = "nil"
+    else
+      circuit_id_str = circuit_id.to_s()
+    end
+
+
     # Make sure dst is reachable
-    if ($next_hop_table.include?(dst) && $next_hop_table[dst] != "NA" &&
+    if circuit
+      Debug.assert { circuit_id != nil }
+      prefix = "CIRCUIT #{circuit_id}/"
+      success_output = prefix + success_output
+      error_output = prefix + error_output
+      
+      if $circuit_table.has_key?(circuit_id) && $circuit_table[circuit_id].has_key?(dst)
+        next_hop = $circuit_table[circuit_id][dst]
+      else
+        STDOUT.puts(error_output % ["0"])
+        return
+      end
+    elsif ($next_hop_table.include?(dst) && $next_hop_table[dst] != "NA" &&
         $clients.has_key?($next_hop_table[dst]))
       next_hop = $next_hop_table[dst]
-      client = $clients[next_hop]
     else
       STDOUT.puts(error_output % ["0"])
       return
     end
 
+    client = $clients[next_hop]
+
     # Construct the packet, keeping tabs on its length
     file_obj = File.open(fname, "r")
-    file_contents = file_obj.read().gsub("\n",$IMPROBABLE_STRING)
+    file_contents = file_obj.read()
     file_obj.close()
 
     file_size = file_contents.bytesize()
-    msg = [$hostname, dst, file_size.to_s(), fname, fpath, file_contents].join($DELIM)
+    file_contents.gsub!("\n", $IMPROBABLE_STRING)
+    msg = [circuit_id_str, $hostname, dst, file_size.to_s(), fname, fpath, file_contents].join($DELIM)
     msg_offset = msg.bytesize() - file_size
 
     packet = Message.new()
     packet.setHeaderField("type", $FTP_HEADER_TYPE)
     packet.setHeaderField("code", 0)
+   
+    if circuit
+      packet.setHeaderField("circuit", 1)
+    else
+      packet.setHeaderField("circuit", 0)
+    end
+
     packet.setPayLoad(msg)
     header_offset = packet.toString().bytesize() - msg_offset - file_size + "\n".bytesize()
 
@@ -203,7 +253,6 @@ module P2
     speed = bytes_from_file_sent / t_total
 
     STDOUT.puts(success_output % [t_total, speed])
-
   end
 
 end

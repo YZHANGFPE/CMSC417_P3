@@ -248,22 +248,45 @@ module CtrlMsg
   def CtrlMsg.sendmsgCallBack(msg, client)
     code = msg.getHeaderField("code")
     payload = msg.getPayLoad().split(" ")
+    
+    is_circuit = (msg.getHeaderField("circuit") == 1)
+    
+    circuit_id = payload.shift()
     src = payload.shift()
     dst = payload.shift()
+    
+    to_print = "SENDMSG: %s -- > %s"
+   
+    if is_circuit
+      Debug.assert {circuit_id != "nil"}
+      to_print = "CIRCUIT #{circuit_id}/" + to_print
+    end
+
     if dst == $hostname
       payload = payload.join(" ")
-      to_print = "SENDMSG: %s -- > %s"
       STDOUT.puts(to_print % [src, payload])
     else
-      forward_client = $clients[$next_hop_table[dst]]
+      if is_circuit
+        k = $circuit_table[circuit_id][dst]
+      else
+        k = $next_hop_table[dst]
+      end
+      forward_client = $clients[k]
       CtrlMsg.send(forward_client, msg)
     end
   end
   
   def CtrlMsg.ftpCallBack(msg, client)
+    
     payload = msg.getPayLoad().split($DELIM)
+  
+    is_circuit = (msg.getHeaderField("circuit") == 1)
+
+    circuit_id = payload.shift()
+
     src = payload.shift()
     dst = payload.shift()
+    
     if dst == $hostname  
       file_size_ideal = payload.shift().to_i()
       fname = payload.shift()
@@ -273,15 +296,28 @@ module CtrlMsg
       success_output = "FTP: #{src} -- > #{fpath}/#{fname}"
       error_output = "FTP ERROR: #{src} -- > #{fpath}/#{fname}"
 
+      if is_circuit
+        Debug.assert {circuit_id != nil}
+        prefix = "CIRCUIT #{circuit_id}/"
+        success_output = prefix + success_output
+        error_output = prefix + error_output
+      end
+
+
       file_size_actual = file_content.bytesize()
-      #if file_size_actual < file_size_ideal
-      #  STDOUT.puts(error_output)
-      #else
-      File.write(fpath + "/" + fname, file_content)
-      STDOUT.puts(success_output)
-      #end
+      if file_size_actual < file_size_ideal
+        STDOUT.puts(error_output)
+      else
+        File.write(fpath + "/" + fname, file_content)
+        STDOUT.puts(success_output)
+      end
     else
-      forward_client = $clients[$next_hop_table[dst]]
+      if is_circuit
+        k = $circuit_table[circuit_id][dst]
+      else
+        k = $next_hop_table[dst]
+      end
+      forward_client = $clients[k]
       CtrlMsg.send(forward_client, msg)
     end
   end
